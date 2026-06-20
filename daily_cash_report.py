@@ -509,16 +509,21 @@ def _clear_transaction_table(ws):
 # ──────────────────────────────────────────────
 
 def main():
-    # CMS 파일 경로를 인자로 받거나 현재 폴더에서 자동 탐색
-    if len(sys.argv) > 1:
-        cms_files = [Path(p) for p in sys.argv[1:]]
-    else:
-        cms_files = list(Path(".").glob("*.xls*"))
-        cms_files = [f for f in cms_files
-                     if not f.name.startswith("시재자금현황") and not f.name.startswith("~$")]
+    # 스크립트 위치의 test_data 폴더를 자동 스캔
+    test_data_dir = Path(__file__).parent / "test_data"
+    if not test_data_dir.exists():
+        print(f"[오류] test_data 폴더가 없습니다: {test_data_dir}")
+        sys.exit(1)
+
+    cms_files = [
+        f for f in test_data_dir.glob("*.xls*")
+        if "시재자금" not in f.name
+        and "입출내역" not in f.name
+        and not f.name.startswith("~$")
+    ]
 
     if not cms_files:
-        print("CMS 파일을 찾을 수 없습니다. 파일 경로를 인수로 넘기거나 같은 폴더에 두세요.")
+        print(f"CMS 파일을 찾을 수 없습니다: {test_data_dir}")
         sys.exit(1)
 
     ibk_records:  list[dict] = []
@@ -533,10 +538,10 @@ def main():
             continue
 
         if cms_type == "IBK":
-            ibk_records = parse_ibk(path)
+            ibk_records += parse_ibk(path)
             print(f"  → IBK 거래 {len(ibk_records)}건 파싱 완료")
         else:
-            hana_records = parse_hana(path)
+            hana_records += parse_hana(path)
             print(f"  → 하나은행 거래 {len(hana_records)}건 파싱 완료")
 
     print()
